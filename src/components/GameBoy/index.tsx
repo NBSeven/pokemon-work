@@ -16,6 +16,7 @@ export default function GameBoy({ children }: { children: React.ReactNode }) {
       },
     });
     sound.play();
+    document.body.style.zoom = "75%";// 设置相对合适的比例
   }, []);
   return (
     <>
