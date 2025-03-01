@@ -8,12 +8,14 @@ import {
   useEstimateFeesPerGas,
   useChains,
 } from "wagmi";
+import { waitForTransactionReceipt } from "@wagmi/core";
+import { config } from "./config";
 import { parseUnits } from "ethers";
 // import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { Flex, Stack } from "@chakra-ui/react";
 import { FollowMouseFramer } from "../FollowMouseFramer";
 import WalletConnect from "../WalletConnect";
-import "@rainbow-me/rainbowkit/styles.css";
+// import "@rainbow-me/rainbowkit/styles.css";
 import { base } from "wagmi/chains";
 
 export const TransactionForm = () => {
@@ -21,7 +23,7 @@ export const TransactionForm = () => {
   const chains = useChains();
   const { sendTransactionAsync, isPending } = useSendTransaction();
   const { switchChainAsync } = useSwitchChain();
-  const { data: nonceData } = useTransactionCount({
+  const { data: nonceData, refetch } = useTransactionCount({
     address: address,
     query: { enabled: !!address },
   });
@@ -34,7 +36,7 @@ export const TransactionForm = () => {
   const [maxPriorityFee, setMaxPriorityFee] = useState("");
   const [error, setError] = useState("");
   const [txHash, setTxHash] = useState("");
-
+  const [result, setResult] = useState("");
   // 自动填充nonce
   useEffect(() => {
     if (nonceData !== undefined) {
@@ -58,7 +60,7 @@ export const TransactionForm = () => {
     e.preventDefault();
     setError("");
     setTxHash("");
-    console.log(chains, "chains");
+    setResult("");
     const chainIds = chains.map((item) => item.id);
     try {
       if (!address || !toAddress) {
@@ -86,6 +88,14 @@ export const TransactionForm = () => {
       };
       const hash = await sendTransactionAsync(txParams);
       setTxHash(hash);
+      const receipt = await waitForTransactionReceipt(config, { hash: hash });
+      if (receipt.status === "success") {
+        console.log("交易成功！", receipt);
+        setResult("Operation successful");
+        refetch();
+      } else {
+        console.log("交易失败！", receipt);
+      }
     } catch (err: any) {
       setError(err.shortMessage || err.message);
     }
@@ -156,12 +166,14 @@ export const TransactionForm = () => {
           <button
             onClick={handleSubmit}
             className="nes-btn is-primary text-3xl"
+            disabled={isPending}
           >
             Submit
           </button>
           {isPending && <div>Transaction Pending...</div>}
           {error && <div>{error}</div>}
           {txHash && <div>Transaction has been sent: {txHash}</div>}
+          {result && <div>{result}</div>}
         </Stack>
       </Flex>
     </div>
